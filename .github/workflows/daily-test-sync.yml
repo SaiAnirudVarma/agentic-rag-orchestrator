@@ -1,0 +1,56 @@
+name: Daily Automated Test & Activity Sync
+
+# Runs every day at 12:00 PM UTC, or manually via the Actions tab.
+on:
+  schedule:
+    - cron: '0 12 * * *'
+  workflow_dispatch:
+
+jobs:
+  run-and-sync:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # allows the runner to commit the audit log back to the repo
+    steps:
+      # 1. Pull down the repository code
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # 2. Provision the Python engine
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      # 3. Install project + test dependencies (requirements-dev.txt pulls in
+      #    requirements.txt plus pytest/httpx, which the test suite needs)
+      - name: Install Project Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements-dev.txt ]; then
+            pip install -r requirements-dev.txt
+          elif [ -f requirements.txt ]; then
+            pip install -r requirements.txt
+          fi
+
+      # 4. Execute the test suite. If this fails, the job stops here and the
+      #    log/commit steps below never run — so a failure never gets logged
+      #    as a false "Passed".
+      - name: Run Pytest Suites
+        run: pytest
+
+      # 5. Record a timestamped audit entry for this run
+      - name: Log Maintenance Timestamp
+        run: |
+          mkdir -p .logs
+          echo "System Verification Passed: $(date -u)" >> .logs/daily_test_audit.log
+
+      # 6. Commit the updated audit log back to the repo
+      - name: Commit & Push Activity Metrics
+        uses: EndBug/add-and-commit@v9
+        with:
+          author_name: "github-actions[bot]"
+          author_email: "github-actions[bot]@users.noreply.github.com"
+          message: "chore: automated daily system validation & logging [skip ci]"
+          add: ".logs/daily_test_audit.log"
