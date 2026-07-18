@@ -1,0 +1,55 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: agentic-rag-orchestrator:latest
+    container_name: agentic-rag-api
+    ports:
+      - "8000:8000"
+    environment:
+      APP_NAME: "Agentic RAG Orchestrator"
+      ENVIRONMENT: production
+      LOG_LEVEL: INFO
+      REDIS_URL: redis://redis:6379/0
+      REDIS_CACHE_TTL_SECONDS: "300"
+      MCP_SERVER_NAME: agentic-rag-mcp-server
+      SANDBOX_EXECUTION_ENABLED: "true"
+      SANDBOX_NAMESPACE: agentic-rag-sandbox
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - agentic-rag-net
+
+  redis:
+    image: redis:7.4-alpine
+    container_name: agentic-rag-redis
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "256mb", "--maxmemory-policy", "allkeys-lru"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - agentic-rag-net
+
+volumes:
+  redis_data:
+    driver: local
+
+networks:
+  agentic-rag-net:
+    driver: bridge
