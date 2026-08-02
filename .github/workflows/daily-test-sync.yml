@@ -50,7 +50,7 @@ jobs:
       - name: Commit & Push Activity Metrics
         uses: EndBug/add-and-commit@v9
         with:
-          author_name: "github-actions[bot]"
-          author_email: "github-actions[bot]@users.noreply.github.com"
+          author_name: "SaiAnirudVarma"
+          author_email: "saianirudhvarmauppalapati@gmail.com"
           message: "chore: automated daily system validation & logging [skip ci]"
           add: ".logs/daily_test_audit.log"
